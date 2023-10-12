@@ -1,0 +1,57 @@
+import tkinter as tk
+
+class AssetDataInputGUI:
+    def __init__(self):
+        self.window = tk.Tk()
+        self.window.title("Asset Data Input")
+
+        # Create labels for each field
+        self.asset_tag_label = tk.Label(self.window, text="Asset Tag:")
+        self.machine_name_label = tk.Label(self.window, text="Machine Name:")
+        self.make_label = tk.Label(self.window, text="Make:")
+        self.model_label = tk.Label(self.window, text="Model:")
+
+        # Create text boxes for each field
+        self.asset_tag_entry = tk.Entry(self.window)
+        self.machine_name_entry = tk.Entry(self.window)
+        self.make_entry = tk.Entry(self.window)
+        self.model_entry = tk.Entry(self.window)
+
+        # Create a submit button
+        self.submit_button = tk.Button(self.window, text="Submit", command=self.on_submit)
+
+        # Place the widgets on the window
+        self.asset_tag_label.grid(row=0, column=0)
+        self.asset_tag_entry.grid(row=0, column=1)
+        self.machine_name_label.grid(row=1, column=0)
+        self.machine_name_entry.grid(row=1, column=1)
+        self.make_label.grid(row=2, column=0)
+        self.make_entry.grid(row=2, column=1)
+        self.model_label.grid(row=3, column=0)
+        self.model_entry.grid(row=3, column=1)
+        self.submit_button.grid(row=4, column=1)
+
+        # Start the mainloop
+        self.window.mainloop()
+
+    def on_submit(self):
+        # Get the data from the text boxes
+        asset_tag = self.asset_tag_entry.get()
+        machine_name = self.machine_name_entry.get()
+        make = self.make_entry.get()
+        model = self.model_entry.get()
+
+        # Print the data to the console
+        print("Asset Tag:", asset_tag)
+        print("Machine Name:", machine_name)
+        print("Make:", make)
+        print("Model:", model)
+
+        # Clear the text boxes
+        self.asset_tag_entry.delete(0, tk.END)
+        self.machine_name_entry.delete(0, tk.END)
+        self.make_entry.delete(0, tk.END)
+        self.model_entry.delete(0, tk.END)
+
+if __name__ == "__main__":
+    gui = AssetDataInputGUI()
