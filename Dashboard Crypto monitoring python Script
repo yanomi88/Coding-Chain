@@ -1,0 +1,183 @@
+from pycoingecko import CoinGeckoAPI
+from prettytable import PrettyTable
+import xml.etree.ElementTree as ET
+import os
+import datetime
+from time import time, sleep
+from colorama import init, Fore
+
+
+def clear():
+    os.system('cls')
+
+
+def readAssetList(tree):
+    assetlist = tree.find("assetlist")
+    assets = assetlist.findall("asset")
+    return assets
+
+def readAssetidList(tree):
+    assetidlist = tree.find("assetbyidlist")
+    assetids = assetidlist.findall("assetid")
+    return assetids
+
+def readRefreshInterval(tree):
+    refresh_interval = tree.find("refreshinterval").text
+    return refresh_interval
+
+
+def getCoinList(cg):
+
+    coinList = ""
+
+    try:
+        coinList = cg.get_coins_list()
+    except:
+        print("Error calling get_coins_list")
+
+    return coinList
+
+
+def GetPrices(myAssetList, myAssetIdList):
+    # define the table columns
+    myTable = PrettyTable()
+    myTable.field_names = ["Symbol", "Name", "Value (USD)", "24hr Chg (USD)", "Value (BTC)", "24hr Chg (BTC)",
+                           "Value (ETH)", "24hr Chg (ETH)", "24hr Volume (USD)"]
+
+    myids = ''
+
+# append the addet list
+    for child in myAssetList:
+        res = next((sub for sub in gv_coin_list if sub['symbol'].lower() == child.get('id').lower()), None)
+        #        print(child.get('id'))
+        if res == None:
+            print("\n")
+            print("Unknown symbol: ", child.get('id'))
+        else:
+            myids = myids + ',' + str(res['id'])
+    #       print(str(res['id']))
+
+#append the asset id list
+    for child in myAssetIdList:
+        myids = myids + ',' + str(child.get('id'))
+
+    myids = myids[1:]
+    print("\n")
+
+    myPrices = ""
+
+    try:
+        myPrices = cg.get_price(
+            ids=myids,
+            vs_currencies='usd,btc,eth,gbp',
+            include_24hr_vol='true',
+            include_24hr_change='true')
+    except:
+        print("Error calling get_price")
+
+#   print(myPrices)
+
+    if myPrices != "":
+        # Loop through result and populate the table
+        for x, y in myPrices.items():
+            # Get the symbol
+            res = next((sub for sub in gv_coin_list if sub['id'] == x.lower()), None)
+
+            # USD fields
+            key_value_usd = list(y)[0]
+            key_24hrv_usd = list(y)[1]
+            key_24hrch_usd = list(y)[2]
+
+            # BTC fields
+            key_value_btc = list(y)[3]
+            key_24hrv_btc = list(y)[4]
+            key_24hrch_btc = list(y)[5]
+
+            # ETH fields
+            key_value_eth = list(y)[6]
+            key_24hrv_eth = list(y)[7]
+            key_24hrch_eth = list(y)[8]
+
+            # GBP fields
+            key_value_gbp = list(y)[9]
+            key_24hrv_gbp = list(y)[10]
+            key_24hrch_gbp = list(y)[11]
+
+    #        print(x.lower, y[key_24hrch_usd])
+
+            # Colour in the text depending on value - usd 24hr change
+            key_24hrch_usd_val = ''
+            key_24hrch_btc_val = ''
+            key_24hrch_eth_val = ''
+
+            if y[key_24hrch_usd] is not None:
+                if y[key_24hrch_usd] < 0:
+                    key_24hrch_usd_val = Fore.LIGHTRED_EX + str("{0:.2f}%".format(y[key_24hrch_usd])) + Fore.RESET
+                else:
+                    key_24hrch_usd_val = Fore.GREEN + str("{0:.2f}%".format(y[key_24hrch_usd])) + Fore.RESET
+
+            # Colour in the text depending on value - usd 24hr change
+            if y[key_24hrch_btc] is not None:
+                if y[key_24hrch_btc] < 0:
+                    key_24hrch_btc_val = Fore.LIGHTRED_EX + str("{0:.2f}%".format(y[key_24hrch_btc])) + Fore.RESET
+                else:
+                    key_24hrch_btc_val = Fore.GREEN + str("{0:.2f}%".format(y[key_24hrch_btc])) + Fore.RESET
+
+            # Colour in the text depending on value - eth 24hr change
+            if y[key_24hrch_eth] is not None:
+                if y[key_24hrch_eth] < 0:
+                    key_24hrch_eth_val = Fore.LIGHTRED_EX + str("{0:.2f}%".format(y[key_24hrch_eth])) + Fore.RESET
+                else:
+                    key_24hrch_eth_val = Fore.GREEN + str("{0:.2f}%".format(y[key_24hrch_eth])) + Fore.RESET
+
+            # Add the row of data to the table
+            myTable.add_row([
+                str(res['symbol'].upper()),
+                str(res['name']),
+                y[key_value_usd],  # Value
+                key_24hrch_usd_val,  # 24hr Chg usd
+                str("{0:.8f}".format(y[key_value_btc])),  # Value usd
+                key_24hrch_btc_val,  # 24hr Chg btc
+                str("{0:.8f}".format(y[key_value_eth])),  # Value usd
+                key_24hrch_eth_val,  # 24hr Chg btc
+                str("{0:.2f}".format(y[key_24hrv_usd]))  # 24hr volume
+            ])
+
+
+        print("Last updated: " + str(datetime.datetime.now()))
+
+        # Do some table alignments
+        myTable.sortby = "Symbol"
+        myTable.align["Symbol"] = "l"
+        myTable.align["Name"] = "l"
+        myTable.align["Value"] = "r"
+        print(myTable)
+
+        print("Auto refreshes every " + gv_refresh_interval + " seconds")
+
+#####################
+# PROGRAM STARTS HERE
+#####################
+
+# initiate Coingecko API
+cg = CoinGeckoAPI()
+
+# Read config file
+gv_config_tree = ET.parse('CDConfig.xml')
+
+# Get the Full coin list from Coingecko
+gv_coin_list = ""
+gv_coin_list = getCoinList(cg)
+
+# Read the list of my coins from config file
+gv_asset_list = readAssetList(gv_config_tree)
+gv_assetid_list = readAssetidList(gv_config_tree)
+
+# Get Refresh Interval
+gv_refresh_interval = readRefreshInterval(gv_config_tree)
+
+while True:
+    clear()
+    GetPrices(gv_asset_list, gv_assetid_list)
+    sleep(int(gv_refresh_interval))
+    clear()
